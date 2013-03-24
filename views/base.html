@@ -125,6 +125,11 @@
               {% trans %} My Profile {% endtrans %}
             </a>
           </li>
+          <li class='active'>
+            <a href="mentors">
+              {% trans %} Mentors {% endtrans %}
+            </a>
+          </li>
           {{course_info.base.before_navbar_ends | safe}}
           {% if is_super_admin %}
           <li class="pull-right">

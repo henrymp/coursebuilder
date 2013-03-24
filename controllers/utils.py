@@ -275,6 +275,14 @@ class PreviewHandler(BaseHandler):
         else:
             self.render('preview.html')
 
+class Mentors(BaseHandler):
+    """Handler for viewing course preview."""
+
+    def get(self):
+        """Handles GET requests."""
+        self.template_value['navbar'] = {'registration': True}
+        self.render('mentors.html')
+
 
 class RegisterHandler(BaseHandler):
     """Handler for course registration."""

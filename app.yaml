@@ -41,4 +41,3 @@ handlers:
   login: required
 - url: /.*
   script: main.app
-
