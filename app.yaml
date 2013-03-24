@@ -1,10 +1,16 @@
-application: dtlcourse  
+application: kcgigfest  
 version: 1
 runtime: python27
 api_version: 1
 threadsafe: false
 
 env_variables:
+  LRS_DOMAIN: lrs.adlnet.gov
+  STATEMENTS_PATH: /xapi/statements
+  LRS_USERNAME: 5bda497384c045d2b92674321138df23 
+  LRS_PASSWORD: dtxgmjtjEa
+  COURSE_NAME: 'KCGigfest'
+  COURSE_DESCRIPTION: 'A Google Course Builder MOOC on Search Education.'
   GCB_PRODUCT_VERSION: '1.3.0'
 
 inbound_services:
@@ -28,6 +34,11 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
   secure: always
+- url: /tincan/statements
+  script: tincan.app
+- url: /tincan/.*
+  script: tincan.app
+  login: required
 - url: /.*
   script: main.app
 

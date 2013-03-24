@@ -18,6 +18,7 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
 import logging
+import json, os, uuid
 from models import models
 from models import transforms
 from models import utils
@@ -26,6 +27,7 @@ from models.models import StudentAnswersEntity
 from tools import verify
 from utils import BaseHandler
 from google.appengine.ext import db
+from google.appengine.api import users, memcache, taskqueue
 
 
 def store_score(course, student, assessment_type, score):
@@ -55,6 +57,116 @@ def store_score(course, student, assessment_type, score):
 
 class AnswerHandler(BaseHandler):
     """Handler for saving assessment answers."""
+    def tincan(self, course_score=None, course_success=None):
+        tincan_actor = {
+          'mbox': 'mailto:' + self.personalize_page_and_get_enrolled().key().name()
+        }
+        tincan_timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
+        tincan_course_activity = {
+          'id': self.request.host_url,
+          'definition': {
+            'name': {'en': os.environ['COURSE_NAME']},
+            'description': {
+              'en': os.environ['COURSE_DESCRIPTION']
+            }
+          }
+        }
+
+        assessment_type = self.request.get('assessment_type')
+        #default to totally random when impossible to determine
+        tincan_assessment_uri = os.environ.get('HTTP_REFERER', 'urn:uuid:' + str(uuid.uuid4()))
+        tincan_assessment_activity = {
+          'id': tincan_assessment_uri,
+          'definition': {
+            'name': {
+              'en':  assessment_type + ' assessment'
+            }
+          }
+        }
+
+        tincan_assessment_statement = {
+          'timestamp': tincan_timestamp,
+          'id': str(uuid.uuid4()),
+          'actor': tincan_actor,
+          'verb': {
+            'id': 'http://adlnet.gov/expapi/verbs/completed',
+            'display': {
+              'en': 'completed'
+            }
+          },
+          'object': tincan_assessment_activity,
+          'result': {
+            'score': {
+              'scaled': float(self.request.get('score', 0)) / 100
+            },
+            'completion': True
+          },
+          'context': {
+            'contextActivities': {
+              'parent': tincan_course_activity
+            }
+          }
+        }
+        statements = [tincan_assessment_statement]
+
+
+        if course_score is not None and course_success is not None:
+          statements.append({
+            'timestamp': tincan_timestamp,
+            'id': str(uuid.uuid4()),
+            'actor': tincan_actor,
+            'verb': {
+              'id': 'http://adlnet.gov/expapi/verbs/completed',
+              'display': {
+                'en': 'completed'
+              }
+            },
+            'object': tincan_course_activity,
+            'result': { #to be filled in during processing below
+              'score': {
+                'scaled': course_score
+              },
+              'success': course_success,
+              'completion': True
+            }
+          })
+
+        question_identifier = 0
+        while(str(question_identifier) in self.request.POST):
+          question = str(question_identifier)
+          tincan_question_statement = {
+            'timestamp': tincan_timestamp,
+            'id': str(uuid.uuid4()),
+            'actor': tincan_actor,
+              'verb': {
+              'id': 'http://adlnet.gov/expapi/verbs/answered',
+              'display': {
+                'en': 'answered'
+              }
+            },
+            'object': {
+              'id': tincan_assessment_uri + '#' + question,
+              'definition': {
+                'name': {
+                  'en': assessment_type + ' question #' + question
+                }
+              }
+            },
+            'result': {
+              'completion': True,
+              'success': self.request.POST[question] == 'true'
+            },
+            'context': {
+              'contextActivities': {
+                'parent': tincan_assessment_activity,
+                'other': tincan_course_activity
+              }
+            }
+          }
+          statements.append(tincan_question_statement)
+          question_identifier += 1
+
+        taskqueue.add(url='/tincan/statements', method='POST', payload=json.dumps(statements))
 
     # Find student entity and save answers
     @db.transactional(xg=True)
@@ -146,4 +258,14 @@ class AnswerHandler(BaseHandler):
             course.is_last_assessment(unit))
 
         self.template_value['overall_score'] = course.get_overall_score(student)
+
+        #call tincan
+        
+        if assessment_type == 'postcourse_pass':
+            self.tincan(course.get_overall_score(student) / 100.0, True)
+        elif assessment_type == 'postcourse_fail':
+            self.tincan(course.get_overall_score(student) / 100.0, False)
+        else:
+            self.tincan()
+
         self.render('test_confirmation.html')

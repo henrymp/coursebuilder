@@ -14,6 +14,61 @@
     <div style="margin-top: 20px;" class="gcb-cols">
       <div class="gcb-col-1">
       </div>
+        {% if student %}
+        <div style="clear:both; width:94%;">
+          <table style="border-collapse:collapse;">
+            <colgroup>
+              <col style="width: 10%">
+              <col>
+            </colgroup>
+            <tr>
+              <th align="left">{% trans %} Currently enrolled {% endtrans %}</th>
+              <td>{{ student.is_enrolled }}</td>
+            </tr>
+            <tr>
+              <th align="left">{% trans %} Date enrolled {% endtrans %}</th>
+              <td>{{ student.enrolled_on }}</td>
+            </tr>
+            <tr>
+              <th align="left">{% trans %} Email {% endtrans %}</th>
+              <td>{{ student.key().name() }}</td>
+            </tr>
+            <tr>
+              <th align="left">{% trans %} Name {% endtrans %}</th>
+              <td>{{ student.name }}</td>
+            </tr>
+
+            <tr>
+              <th align="left" colspan=2>{% trans %} Assessment scores {% endtrans %}</th>
+            </tr>
+
+            {% for assessment in score_list %}
+              <tr>
+                <th align="left">&nbsp;&nbsp;&nbsp;{{ assessment['title'] }}</th>
+                <td>
+                  {% if 'score' in assessment and assessment['score'] is defined %}
+                    <div class="progress" id="{{ assessment['title'] }}">
+                      <div class="bar" style="width: {{ assessment['score'] }}%;">{{ assessment['score'] }}%</div>
+                    </div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+
+            {% if overall_score != None %}
+              <tr>
+                <th align="left">{% trans %} Overall course score {% endtrans %}</th>
+                <td>
+                  <div class="progress" id="assessment-score-overall">
+                      <div class="bar" style="width: {{ overall_score }}%;">{{ overall_score }}%</div>
+                    </div>
+                </td>
+              </tr>
+            {% endif %}
+          </table>
+        </div>
+        {% endif %}
+
       <div class="gcb-col-9">
 
         <h1 class="schedule-headers">

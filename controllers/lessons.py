@@ -99,7 +99,7 @@ class CourseHandler(BaseHandler):
         if not user:
             self.redirect('/preview')
             return None
-
+        course = self.get_course()
         student = self.personalize_page_and_get_enrolled()
         if not student:
             return
@@ -110,6 +110,9 @@ class CourseHandler(BaseHandler):
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value)
         self.template_value['navbar'] = {'course': True}
+        self.template_value['student'] = student
+        self.template_value['score_list'] = course.get_all_scores(student)
+        self.template_value['overall_score'] = course.get_overall_score(student)
         self.render('course.html')
 
 

@@ -74,7 +74,7 @@ def gcb_configure_dev_server_if_running():
         if stub:
             policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
                 probability=1)
-            stub.SetConsistencyPolicy(policy)
+            #stub.SetConsistencyPolicy(policy)
 
 
 gcb_init_third_party()
